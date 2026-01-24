@@ -1,0 +1,106 @@
+---
+title: Dimensionality Reduction of Football Player Attributes Using EA Sports FC 26
+  Data
+author: "Florian Ficek"
+date: "2026-01-24"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Introduction
+
+
+```{r}
+library(corrplot)
+library(ggplot2)
+library(caret)
+library(factoextra)
+library(gridExtra)
+
+player_stats <- read.csv('fc26_data.csv')
+
+summary(player_stats)
+```
+
+```{r}
+dim(player_stats)
+```
+
+```{r}
+player_stats = player_stats[complete.cases(player_stats), ]
+summary(player_stats)
+```
+
+```{r}
+dim(player_stats)
+```
+
+```{r}
+data_corr <- cor(player_stats, method="pearson") 
+corrplot(data_corr, tl.cex=0.6)
+```
+
+```{r}
+preproc <- preProcess(player_stats, method=c("center", "scale"))
+player_stats_s <- predict(preproc, player_stats)
+summary(player_stats_s)
+```
+
+```{r}
+player_stats_cov <- cov(player_stats_s)
+player_stats_eigen <- eigen(player_stats_cov)
+head(player_stats_eigen$vectors)
+```
+
+```{r}
+player_stats_s_pca1 <- prcomp(player_stats_s, center=FALSE, scale.=FALSE)
+head(player_stats_s_pca1$rotation)
+```
+
+```{r}
+summary(player_stats_s_pca1)
+```
+
+```{r}
+fviz_pca_var(player_stats_s_pca1, col.var="steelblue")
+```
+
+```{r}
+eigen_plot <- fviz_eig(player_stats_s_pca1, choice='eigenvalue', addlabels=TRUE)
+variances_plot <- fviz_eig(player_stats_s_pca1)
+grid.arrange(eigen_plot, variances_plot, nrow=2)
+```
+
+```{r}
+a<-summary(player_stats_s_pca1)
+plot(a$importance[3,],type="l")
+```
+
+```{r}
+PC1 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 1, top=10)
+PC2 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 2, top=10)
+PC3 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 3, top=10)
+PC4 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 4, top=10)
+```
+
+```{r}
+grid.arrange(PC1, PC2)
+```
+
+```{r}
+grid.arrange(PC3, PC4)
+```
+
+
+
+
+
+
+
+
