@@ -28,6 +28,8 @@ player_stats_cov <- cov(player_stats_s)
 player_stats_eigen <- eigen(player_stats_cov)
 head(player_stats_eigen$vectors)
 
+player_stats_eigen$values
+
 player_stats_s_pca1 <- prcomp(player_stats_s, center=FALSE, scale.=FALSE)
 head(player_stats_s_pca1$rotation)
 

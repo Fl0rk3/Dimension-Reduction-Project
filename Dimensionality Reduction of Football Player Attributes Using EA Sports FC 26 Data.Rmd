@@ -14,7 +14,68 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 # Introduction
+<div style="text-align: justify">
+Modern football performance is characterized by a wide range of technical, physical, and mental attributes, resulting in highly multidimensional player evaluation data. Such high-dimensional datasets often contain strong correlations between variables, which complicates interpretation and comparative analysis. Dimensionality reduction techniques are therefore essential for uncovering the underlying structure of player performance while preserving the most relevant information.
 
+This project applies Principal Component Analysis (PCA) to player attribute data derived from EA Sports FC 26. The objective is to reduce the dimensionality of the dataset and identify a smaller number of latent components that summarize the key performance characteristics of football players. By transforming correlated attributes into a set of uncorrelated principal components, PCA enables a more compact and interpretable representation of player profiles.
+
+The analysis focuses on evaluating the correlation structure of the data, determining the appropriate number of components using established criteria, and interpreting the retained components in the context of football performance. The results demonstrate that a substantial proportion of the total variance can be captured by a limited number of components, providing meaningful insights into the fundamental dimensions of player ability.
+</div>
+
+# 1. Dataset
+<div style="text-align: justify">
+The dataset consists of information on 18405 professional football players featured in the video game EA Sports FC 26. Each player is described using 35 quantitative attributes that reflect various aspects of football performance. The data were scraped from sofifa.com using the publicly available GitHub repository: github.com/rovnez/fifa-data/.
+
+The set of player attributes can be categorized into seven main feature groups, each representing a distinct dimension of player performance:
+
+* **overall** - general performance indicators, including pace, shooting, passing, dribbling, defending, and physicality,
+* **attacking** - attributes related to offensive actions, such as crossing, finishing, and heading accuracy,
+* **skill** - technical abilities, including ball control, curve, and free-kick accuracy,
+* **movement** - attributes describing mobility and coordination, such as acceleration, sprint speed, and balance,
+* **power** - physical strength-related attributes, including stamina, strength, and shot power,
+* **mentality** - psychological and cognitive attributes reflecting how a player performs under pressure,
+* **defending** - attributes associated with defensive effectiveness and tackling ability.
+
+All 35 features are measured on an interval scale ranging from 0 to 99, where higher values indicate stronger performance in the corresponding attribute:
+
+* **pace** - the speed with which a player walks or runs,
+* **shooting** - player's general shooting strength and accuracy,
+* **passing** - determines how accurate a player passes the ball to a teammate,
+* **dribbling** - player’s ability to carry the ball and past an opponent,
+* **defending** - player’s ability to defend,
+* **physic** - represent the physical and bodily state of a player,
+* **attacking_crossing** - the quality and accuracy of a player’s crosses,
+* **attacking_finishing** - the ability of a player to score,
+* **attacking_heading_accuracy** - player’s accuracy when using the head to pass, shoot or clear the ball,
+* **attacking_short_passing** - player’s accuracy for the short passes,
+* **attacking_volleys** -  the ability of a player to perform volleys,
+* **skill_dribbling** - player’s ability to carry the ball and past an opponent,
+* **skill_curve** - player’s ability to curve the ball when passing and shooting,
+* **skill_fk_accuracy** - precision with which a player takes free kicks,
+* **skill_long_passing** - player’s accuracy for the long passes,
+* **skill_ball_control** - player’s ability to keep possession of the ball,
+* **movement_acceleration** - the rate at which a player’s running speed increases,
+* **movement_sprint_speed** - defines the speed rate of a player’s sprinting,
+* **movement_agility** - determines a player’s ability to manage and control the ball quickly and gracefully,
+* **movement_reactions** - player’s reaction time in response to events taking place around them,
+* **movement_balance** - the even distribution of enabling a player to remain upright and keep going,
+* **power_shot_power** - the strength of a player’s shoots,
+* **power_jumping** - the ability of a player to jump off the ground for headers,
+* **power_stamina** - player’s ability to sustain prolonged physical or mental effort,
+* **power_strength** - the quality or state of being physically strong,
+* **power_long_shots** - player’s accuracy for the shots taking from long distances,
+* **mentality_aggression** - player’s degree of aggressiveness,
+* **mentality_interceptions** - the ability of a player to intercept the ball,
+* **mentality_positioning** - defines a player’s ability to spot open space and move into good positions that offer an attacking advantage
+* **mentality_vision** - player’s mental awareness about his teammates’ positioning, for passing the ball to them,
+* **mentality_penalties** - player’s accuracy for taking penalty shots,
+* **mentality_composure** - player’s the state or feeling of being calm and in control of their frustration,
+* **defending_marking_awareness** - the ability of a player to mark an opponent,
+* **defending_standing_tackle** - the ability of performing standing tackle,
+* **defending_sliding_tackle** - the ability to pull off a sliding tackle.
+</div>
+
+## 1.1. Envionment Preparation
 
 ```{r}
 library(corrplot)
@@ -32,6 +93,12 @@ summary(player_stats)
 dim(player_stats)
 ```
 
+## 1.2. Data preparation
+
+<div style="text-align: justify">
+First, all observations containing missing values were removed, as principal component analysis cannot be applied to datasets with missing entries.
+</div>
+
 ```{r}
 player_stats = player_stats[complete.cases(player_stats), ]
 summary(player_stats)
@@ -41,10 +108,26 @@ summary(player_stats)
 dim(player_stats)
 ```
 
+<div style="text-align: justify">
+As a result, the final dataset contains information on 16343 players.
+</div>
+
+## 1.3. Correlation Plot
+
+<div style="text-align: justify">
+Before applying the PCA algorithm, it is important to examine the degree of correlation among the variables.
+</div>
+
 ```{r}
 data_corr <- cor(player_stats, method="pearson") 
 corrplot(data_corr, tl.cex=0.6)
 ```
+
+<div style="text-align: justify">
+The correlation matrix reveals substantial dependencies among player attributes, with several groups of variables exhibiting moderate to strong positive correlations. In particular, technical and attacking attributes, movement-related variables, and defensive skills form distinct correlation clusters, indicating the presence of underlying latent dimensions. The observed correlation structure suggests considerable multicollinearity among the variables, thereby justifying the application of principal component analysis as a dimensionality reduction technique.
+</div>
+
+## 1.4. Standardization Data
 
 ```{r}
 preproc <- preProcess(player_stats, method=c("center", "scale"))
@@ -52,35 +135,90 @@ player_stats_s <- predict(preproc, player_stats)
 summary(player_stats_s)
 ```
 
+# 2. Principal Component Analysis
+
+## 2.1. Eigenvectors and Eigenvalues
+
+<div style="text-align: justify">
+In the context of principal component analysis, eigenvectors represent the directions in which the data exhibit the greatest variance. Each eigenvector defines a principal component and corresponds to a linear combination of the original variables. The coefficients of an eigenvector, commonly referred to as loadings, indicate the contribution of each variable to the respective principal component. Eigenvectors are orthogonal to one another, ensuring that the resulting principal components are uncorrelated and capture distinct dimensions of the data structure.
+</div>
+
 ```{r}
 player_stats_cov <- cov(player_stats_s)
 player_stats_eigen <- eigen(player_stats_cov)
 head(player_stats_eigen$vectors)
 ```
 
+<div style="text-align: justify">
+Eigenvalues quantify the amount of variance explained by each corresponding eigenvector. A larger eigenvalue indicates that the associated principal component accounts for a greater proportion of the total variability in the dataset. In PCA, eigenvalues are commonly used to determine the number of components to retain, with criteria such as the Kaiser rule and the cumulative explained variance serving as standard selection methods. Components associated with small eigenvalues contribute little additional information and are often excluded from further analysis.
+</div>
+
+## 2.2. Principal Component Analysis
+
 ```{r}
 player_stats_s_pca1 <- prcomp(player_stats_s, center=FALSE, scale.=FALSE)
 head(player_stats_s_pca1$rotation)
 ```
 
+<div style="text-align: justify">
+PCA was employed as a dimensionality reduction technique to identify latent structures within the player attribute data. By projecting the original variables onto a lower-dimensional orthogonal space, the method facilitates interpretation while preserving the majority of the information contained in the dataset.
+</div>
+
 ```{r}
 summary(player_stats_s_pca1)
 ```
+
+<div style="text-align: justify">
+The results indicate that a substantial proportion of the total variance is captured by a small number of principal components. Specifically, the first four components explain approximately 82.8% of the original variance, demonstrating a strong dimensionality reduction with minimal information loss. When the number of retained components is increased to nine, the cumulative explained variance exceeds 90%, indicating that most of the variability present in the original dataset has been preserved.
+
+Beyond this point, the contribution of additional components becomes progressively smaller. In particular, after approximately 20 components, the increase in cumulative explained variance is marginal, suggesting diminishing returns from retaining further dimensions. This pattern confirms that the underlying structure of the data can be effectively summarized using a limited number of principal components.
+</div>
+
+## 2.3. Variable Projection Plot
+
+<div style="text-align: justify">
+To facilitate interpretation of the retained principal components, a variable projection plot was constructed for the first two principal components. This biplot illustrates the contributions of the original variables to the reduced component space and provides insight into the relationships among attributes as well as their influence on each component.
+</div>
 
 ```{r}
 fviz_pca_var(player_stats_s_pca1, col.var="steelblue")
 ```
 
+<div style="text-align: justify">
+Together, the first two principal components capture the dominant performance dimensions of football players and provide an interpretable low-dimensional representation of the original high-dimensional attribute space.
+</div>
+
+# 3. Analysis of Principal Components
+
+<div style="text-align: justify">
+The analysis of principal components focuses on determining the appropriate number of components to retain and assessing their contribution to explaining the variability of the original dataset. Several complementary criteria were employed for this purpose, including the scree plot, the Kaiser criterion, and the cumulative explained variance.
+</div>
+
 ```{r}
-eigen_plot <- fviz_eig(player_stats_s_pca1, choice='eigenvalue', addlabels=TRUE)
-variances_plot <- fviz_eig(player_stats_s_pca1)
+eigen_plot <- fviz_eig(player_stats_s_pca1, choice='eigenvalue', ylim = c(0, 17),
+                       addlabels=TRUE, main="Eigenvalues of Principal Components")
+variances_plot <- fviz_eig(player_stats_s_pca1, ylim = c(0, 50),
+                        addlabels=TRUE, main="Percentage of Variance Explained by Principal Components")
 grid.arrange(eigen_plot, variances_plot, nrow=2)
 ```
+
+<div style="text-align: justify">
+According to the Kaiser rule, only components with eigenvalues greater than one should be retained, as such components explain more variance than an individual standardized variable. The scree plot illustrates the distribution of eigenvalues across successive components and reveals a pronounced decline after the fourth component. Only the first four principal components satisfy the Kaiser criterion, indicating that they capture the most meaningful structure in the data.
+</div>
 
 ```{r}
 a<-summary(player_stats_s_pca1)
 plot(a$importance[3,],type="l")
 ```
+<div style="text-align: justify">
+This conclusion is further supported by the cumulative explained variance curve, which shows that the first four components account for over 80% of the total variance. Beyond this point, the curve flattens considerably, and additional components contribute only marginal increases in explained variance. Together, these results suggest that retaining four principal components provides an efficient and interpretable low-dimensional representation of the original high-dimensional player attribute space.
+</div>
+
+# 4. Interpretation of Principal Components
+
+<div style="text-align: justify">
+The contribution plots provide insight into the relative importance of individual variables in defining each of the retained principal components. Variables with contributions exceeding the average threshold (indicated by the dashed line) play a dominant role in shaping the corresponding component and are therefore central to its interpretation.
+</div>
 
 ```{r}
 PC1 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 1, top=10)
@@ -92,15 +230,25 @@ PC4 <- fviz_contrib(player_stats_s_pca1, choice = "var", axes = 4, top=10)
 ```{r}
 grid.arrange(PC1, PC2)
 ```
+<div style="text-align: justify">
+The first principal component (Dim-1) is primarily driven by technical and attacking attributes, including dribbling, ball control, passing, shooting, and finishing. Mental attributes related to vision and positioning also contribute substantially. This component captures overall technical proficiency and offensive capability, reflecting a general measure of player quality in possession and attacking play.
+
+The second principal component (Dim-2) is dominated by defensive and physical variables, such as marking awareness, standing and sliding tackles, interceptions, aggression, and strength. These attributes clearly distinguish players with strong defensive and physical profiles from those whose strengths lie in offensive skills. Accordingly, Dim-2 can be interpreted as a defensive and physical intensity dimension.
+</div>
 
 ```{r}
 grid.arrange(PC3, PC4)
 ```
 
+<div style="text-align: justify">
+The third principal component (Dim-3) is characterized by contributions from power and movement related attributes, including strength, jumping ability, balance, agility, and acceleration. This component represents physical robustness and aerial ability, emphasizing attributes associated with physical duels and stability rather than technical finesse.
 
+The fourth principal component (Dim-4) is strongly influenced by pace related variables, particularly sprint speed, acceleration, and overall pace, with additional contributions from jumping and stamina. This component captures explosiveness and speed, distinguishing fast, dynamic players from those with lower mobility.
+</div>
 
+# Summary
+<div style="text-align: justify">
+This project employed principal component analysis to examine football player attributes from EA Sports FC 26. The dataset comprised 16343 players described by 35 performance variables covering technical, physical, mental, and defensive aspects of play. Correlation analysis confirmed the presence of substantial interdependencies among variables, justifying the application of PCA.
 
-
-
-
-
+Using the scree plot, Kaiser criterion, and cumulative explained variance, four principal components were retained, collectively accounting for over 80% of the total variance. These components represent key dimensions of player performance, including technical ability, defensive and physical strength, power, and speed. The findings demonstrate that PCA provides an effective method for reducing the dimensionality of football performance data while preserving its essential structure.
+</div>
